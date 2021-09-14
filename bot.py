@@ -2,6 +2,7 @@
 
 # Бот для telegram на базе python-telegram-bot
 # In TG: @replyboteg_bot
+# Создан для изучения python
 
 # Из модуля telegram.ext будем использовать классы:
 # Updater - позволяет получать данные и передавать их в dispatcher
