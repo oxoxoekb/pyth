@@ -84,10 +84,10 @@ def check_dice(update, _):
     query.answer()
     keyboard = [
         [
-            InlineKeyboardButton("1d6", callback_data=str('DICE6')),
-            InlineKeyboardButton("1d8", callback_data=str('DICE8')),
-            InlineKeyboardButton("1d20", callback_data=str('DICE20')),
-            InlineKeyboardButton("1d100", callback_data=str('DICE100')),
+            InlineKeyboardButton("1d6", callback_data=str(DICE6)),
+            InlineKeyboardButton("1d8", callback_data=str(DICE8)),
+            InlineKeyboardButton("1d20", callback_data=str(DICE20)),
+            InlineKeyboardButton("1d100", callback_data=str(DICE100)),
         ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -130,7 +130,7 @@ def random_dice(update, _):
     elif(query == 'DICE20'):
         dicer = range(1, 21)
     elif(query == 'DICE100'):
-        dicer = range(1, 100)
+        dicer = range(1, 101)
     keyboard = [
         [
             InlineKeyboardButton("Да, сделаем это снова!", callback_data=str(DCS)),
