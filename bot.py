@@ -78,6 +78,11 @@ def start_over(update, _):
     # Сообщаем `ConversationHandler`, что сейчас находимся в состоянии `DORW`
     return DORW
 
+def text(update, context):
+    first_name = update.message.chat.first_name
+    text_received = update.message.text
+    update.message.reply_text(f'Превед, {first_name}! Ты написал "{text_received}", а надо нажать на /start ;)')
+
 def check_dice(update, _):
     """Показ нового выбора кнопок"""
     query = update.callback_query
@@ -229,6 +234,7 @@ if __name__ == '__main__':
     # Добавляем `ConversationHandler` в диспетчер, который
     # будет использоваться для обработки обновлений
     dispatcher.add_handler(conv_handler)
+    dispatcher.add_handler(MessageHandler(Filters.text, text))
 
     updater.start_polling()
     updater.idle()
