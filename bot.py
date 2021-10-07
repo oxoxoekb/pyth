@@ -125,16 +125,20 @@ def check_weather(update, _):
 def random_dice(update, _):
     # А вот эта функция работает криво, т.к if - не работает...
     query = update.callback_query
+    dice_data = {query['data']}
+    print(dice_data)
     query.answer()
+    print(query.answer)
     # Если я определяю заранее
-    dicer = range(1,7)
-    if(query == 'DICE6'):
+    dicer = range(1, 100)
+    if dice_data == '6':
         dicer = range(1, 7)
-    elif(query == 'DICE8'):
+        print(dicer)
+    elif dice_data == '7':
         dicer = range(1, 9)
-    elif(query == 'DICE20'):
+    elif dice_data == '8':
         dicer = range(1, 21)
-    elif(query == 'DICE100'):
+    elif dice_data == '9':
         dicer = range(1, 101)
     keyboard = [
         [
