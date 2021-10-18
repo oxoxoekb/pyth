@@ -31,6 +31,47 @@ logger = logging.getLogger(__name__)
 DORW, DICE, WEATHER, END_OF_THE_END = range(4)
 # Данные обратного вызова
 WTHR, DCS, EKB, MSK, SPB, OTHER, DICE6, DICE8, DICE20, DICE100 = range(10)
+# Словари для кубиков и погоды.
+DICES = {
+    "1d6" : {
+        'value' : "6",
+        'callback_data': "DICE6"
+    },
+    "1d8" : {
+        'value' : "8",
+        'callback_data' : "DICE8"
+    },
+    "1d20" : {
+        'value' : "20",
+        'callback_data' : "DICE20"
+    },
+    "1d100" : {
+        'value' : "100",
+        'callback_data' : "DICE100"
+    }
+}
+CITIES = {
+    "Ekb": {
+        's_name' : "Екатеринбург",
+        'city_id' : "1486209",
+        'callback_data' : "EKB"
+    },
+    "Msk": {
+        's_name' : "Москва",
+        'city_id' : "524901",
+        'callback_data' : "MSK"
+    },
+    "Spb": {
+        's_name' : "Санкт-Петербург",
+        'city_id' : "536203",
+        'callback_data' : "SPB"
+    },
+    "Other": {
+        's_name' : "",
+        'city_id' : "",
+        'callback_data' : "OTHER"
+    }
+}
 
 def start(update, _):
     """Вызывается по команде `/start`."""
@@ -87,9 +128,10 @@ def check_dice(update, _):
     """Показ нового выбора кнопок"""
     query = update.callback_query
     query.answer()
+    print(DICES.get('1d6'))
     keyboard = [
         [
-            InlineKeyboardButton("1d6", callback_data=str(DICE6)),
+            InlineKeyboardButton("1d6", callback_data=DICES(['1d6'][0]['callback_data'])),
             InlineKeyboardButton("1d8", callback_data=str(DICE8)),
             InlineKeyboardButton("1d20", callback_data=str(DICE20)),
             InlineKeyboardButton("1d100", callback_data=str(DICE100)),
@@ -125,21 +167,22 @@ def check_weather(update, _):
 def random_dice(update, _):
     # А вот эта функция работает криво, т.к if - не работает...
     query = update.callback_query
-    dice_data = {query['data']}
-    print(dice_data)
+    dice_data = str({query['data']})
     query.answer()
-    print(query.answer)
     # Если я определяю заранее
     dicer = range(1, 100)
-    if dice_data == '6':
+    if dice_data == str('6'):
         dicer = range(1, 7)
         print(dicer)
-    elif dice_data == '7':
+    elif dice_data == str('7'):
         dicer = range(1, 9)
-    elif dice_data == '8':
+    elif dice_data == str('8'):
         dicer = range(1, 21)
-    elif dice_data == '9':
+    elif dice_data == str('9'):
         dicer = range(1, 101)
+    else:
+        print(dice_data)
+        print(type(dice_data))
     keyboard = [
         [
             InlineKeyboardButton("Да, сделаем это снова!", callback_data=str(DCS)),
@@ -153,12 +196,57 @@ def random_dice(update, _):
     # Сообщаем `ConversationHandler`, что сейчас находимся в состоянии `END_OF_THE_END`
     return END_OF_THE_END
 
-def weather_api(update, _):
-    """Показ выбора кнопок"""
-    # Запрашиваем погоду в ЕКБ (далее будем подставлять ID выбранного города) через ID на openweatherman.org
+def weather_other(update, _):
+    user = update.message.from_user
+    logger.info("Проверка погоды в городе", update.message.text, "для", user.first_name)
     # Токен спрятан в файле
     OWtoken = None
-    city_id = 1486209
+    with open("ow.txt") as f:
+        OWtoken = f.read().strip()
+    s_city = update.message.text
+    city_id = 0
+    # Ищем город
+    try:
+        res = requests.get("http://api.openweathermap.org/data/2.5/find",
+                           params={'q': s_city, 'type': 'like', 'units': 'metric', 'APPID': OWtoken})
+        data = res.json()
+        cities = ["{} ({})".format(d['name'], d['sys']['country'])
+                  for d in data['list']]
+        print("city:", cities)
+        city_id = data['list'][0]['id']
+        print('city_id=', city_id)
+    except Exception as e:
+        print("Указанный город не найден, ошибка:", e)
+        pass
+    res = requests.get("http://api.openweathermap.org/data/2.5/weather",
+                       params={'id': city_id, 'units': 'metric', 'lang': 'ru', 'APPID': OWtoken})
+    data = res.json()
+    # Для дебага вывожу в консоль результат поиска.
+    print(f"В {s_city} сейчас {data['weather'][0]['description']},"
+          f" температура {data['main']['temp']} °C. Попробуем еще раз?")
+    query = update.callback_query
+    query.answer()
+    keyboard = [
+        [
+            InlineKeyboardButton("Да, сделаем это снова!", callback_data=str(DCS)),
+            InlineKeyboardButton("Нет, спасибо.", callback_data=str(WTHR)),
+        ]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    query.edit_message_text(
+        text=f"В {s_city} сейчас {data['weather'][0]['description']},"
+             f" температура {data['main']['temp']} °C. Попробуем еще раз?",
+        reply_markup=reply_markup
+    )
+    return END_OF_THE_END
+
+
+def weather_api(update, _):
+    """Показ выбора кнопок"""
+    # Запрашиваем погоду через ID на openweatherman.org
+    # Токен спрятан в файле
+    print(update.message.text)
+    OWtoken = None
     with open("ow.txt") as f:
         OWtoken = f.read().strip()
     res = requests.get("http://api.openweathermap.org/data/2.5/weather",
@@ -174,7 +262,7 @@ def weather_api(update, _):
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     query.edit_message_text(
-        text=f"В Екатеринбурге сейчас {data['weather'][0]['description']},"
+        text=f"В city_name сейчас {data['weather'][0]['description']},"
              f" температура {data['main']['temp']} °C. Попробуем еще раз?",
         reply_markup=reply_markup
     )
@@ -224,7 +312,7 @@ if __name__ == '__main__':
                 CallbackQueryHandler(weather_api, pattern='^' + str(EKB) + '$'),
                 CallbackQueryHandler(weather_api, pattern='^' + str(MSK) + '$'),
                 CallbackQueryHandler(weather_api, pattern='^' + str(SPB) + '$'),
-                CallbackQueryHandler(weather_api, pattern='^' + str(OTHER) + '$'),
+                MessageHandler(Filters.text, weather_other),
             ],
             END_OF_THE_END: [
                 CallbackQueryHandler(start_over, pattern='^' + str(DCS) + '$'),
