@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 # Этапы/состояния разговора
 DORW, DICE, WEATHER, END_OF_THE_END = range(4)
 # Данные обратного вызова
-WTHR, DCS, EKB, MSK, SPB, OTHER, DICE6, DICE8, DICE20, DICE100 = range(10)
+WTHR, DCS, EKB, MSK, SPB, OTHER, E_CITY, DICE6, DICE8, DICE20, DICE100 = range(11)
 # Словари для кубиков, погоды и пользователей.
 DICES = {
     "1d6" : {
@@ -72,6 +72,11 @@ CITIES = {
         's_city' : "Санкт-Петербург",
         'city_id' : "536203",
         'callback_data' : "SPB"
+    },
+    "E_CITY": {
+        's_city' : " ",
+        'city_id' : " ",
+        'callback_data' : "E_CITY"
     },
     "OTHER": {
         's_city' : "Другой город",
@@ -206,7 +211,7 @@ def choose_city(update, _):
     return WEATHER
 
 
-# тут сделать вывод кнопок ок и назад.
+# эта функция сейчас не используется.
 def weather_other(update, _):
     user = update.message.from_user
     logger.info("Проверка погоды в городе", update.message.text, "для", user.first_name)
@@ -268,7 +273,7 @@ def enter_city (update, _):
     query = update.callback_query
     keyboard = [
         [
-            InlineKeyboardButton("Ок", callback_data='EKB'),
+            InlineKeyboardButton("Ок", callback_data='E_CITY'),
             InlineKeyboardButton("Рестарт", callback_data='WTHR'),
         ]
     ]
@@ -285,15 +290,21 @@ def weather_api(update, _):
     """Показ выбора кнопок"""
     # Запрашиваем погоду через ID на openweatherman.org
     # Токен спрятан в файле
-    # print(update.message.text)
     query = update.callback_query
+    # и вот тут по идее в переменную temp должно записаться значение, которое вводили ранее, но не записывается.
+    # если присвоить переменной temp значение вручную, то работает.
+    # при чем это значение должно вписываться, если, v не совпадает с s_data, но так не работает :\
+    temp = update.message.text
+    # temp = 'Челябинск'
+    print(temp)
+    CITIES['E_CITY']['s_city'] = temp
+    print(CITIES['E_CITY'])
     print(query['data'])
     s_data = query['data']
     for v in CITIES.keys():
         if v == s_data:
             s_city = CITIES[v]['s_city']
-            print(s_city, "dddd")
-        else: s_city = update.message.text
+            print(s_city, "сейчас поищем")
     city_id = search_city(s_city)
     print(city_id, "получили ID города")
     OWtoken = None
@@ -361,6 +372,7 @@ if __name__ == '__main__':
                 CallbackQueryHandler(weather_api, pattern='^EKB$'),
                 CallbackQueryHandler(weather_api, pattern='^MSK$'),
                 CallbackQueryHandler(weather_api, pattern='^SPB$'),
+                CallbackQueryHandler(weather_api, pattern='^E_CITY$'),
                 CallbackQueryHandler(enter_city, pattern='^OTHER$'),
                 CallbackQueryHandler(start_over, pattern='^WTHR$'),
                 MessageHandler(Filters.text, enter_city),
